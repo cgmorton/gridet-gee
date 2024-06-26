@@ -128,7 +128,7 @@ def etsz(nldas_img, surface):
         # .clamp(MinimumAirTemperature, MaximumAirTemperature)
     )
 
-    # Using the NLDAS air pressure instead of computing from elevation
+    # GridET uses the NLDAS air pressure instead of computing from elevation
     #   so that it can be adjusted for elevation in the same way as temperature
     # CGM - This is slightly different than GridET approach since
     #   DeltaZ is computed directly at the GridET scale

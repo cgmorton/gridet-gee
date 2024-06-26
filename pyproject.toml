@@ -1,0 +1,32 @@
+[project]
+name = "gridet-gee"
+version = "0.0.1"
+authors = [
+  { name = "Charles Morton", email = "charles.morton@dri.edu" },
+]
+description = "Google Earth Engine implementation of the GridET model"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["RefET", "Earth Engine", "evapotranspiration"]
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Boost Software License 1.0 (BSL-1.0)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "earthengine-api>=0.1.364",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/cgmorton/gridet-gee"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+exclude = ["ancillary*", "examples*"]

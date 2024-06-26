@@ -1,0 +1,3 @@
+Subset of the full Calculations.vb code that was used to verify the non-GDAL portions of the internal functions and calculations.
+
+This code was run https://onecompiler.com/vb.  A few of the other online VB compilers were tested, but this one seemed to require the fewest modifications to the code.  It was necessary to set the type for some of the array declarations and for the integer variables in the for loops.

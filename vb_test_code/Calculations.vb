@@ -10,15 +10,26 @@ Public Module Program
 
 
   Function CalculateReferenceEvapotranspirationNLDAS_2A(
-    ByVal MinDate As DateTime, ByVal MaxDate As DateTime,
-    ByVal Longitude As Double, ByVal Latitude As Double,
-    ByVal Elevation As Double, ByVal Slope As Double, ByVal Aspect As Double,
-    ByVal AirTemperature As Double, ByVal AirPressure As Double,
-    ByVal NLDAS_Longitude As Double, ByVal NLDAS_Latitude As Double,
-    ByVal NLDAS_Elevation As Double, ByVal NLDAS_Slope As Double, ByVal NLDAS_Aspect As Double,
-    ByVal NLDAS_AirTemperature As Double, ByVal NLDAS_AirPressure As Double,
-    ByVal NLDAS_Rs As Double, ByVal NLDAS_RH As Double,
-    ByVal NLDAS_WindU As Double, ByVal NLDAS_WindV As Double
+    ByVal MinDate As DateTime,
+    ByVal MaxDate As DateTime,
+    ByVal Longitude As Double,
+    ByVal Latitude As Double,
+    ByVal Elevation As Double,
+    ByVal Slope As Double,
+    ByVal Aspect As Double,
+    ByVal AirTemperature As Double,
+    ByVal AirPressure As Double,
+    ByVal NLDAS_Longitude As Double,
+    ByVal NLDAS_Latitude As Double,
+    ByVal NLDAS_Elevation As Double,
+    ByVal NLDAS_Slope As Double,
+    ByVal NLDAS_Aspect As Double,
+    ByVal NLDAS_AirTemperature As Double,
+    ByVal NLDAS_AirPressure As Double,
+    ByVal NLDAS_Rs As Double,
+    ByVal NLDAS_RH As Double,
+    ByVal NLDAS_WindU As Double,
+    ByVal NLDAS_WindV As Double
   ) As Double
 
     'Determine Calculation Hours
@@ -34,7 +45,7 @@ Public Module Program
     Dim HourlySteps As Integer = 60 / TimeStep
     Dim SolarPositions(1440 / TimeStep) As SolarPosition
     For I As Integer = 0 To SolarPositions.Length - 1
-        SolarPositions(I) = CalculateSolarPosition(RecordDate.AddMinutes(I * TimeStep - 30))
+      SolarPositions(I) = CalculateSolarPosition(RecordDate.AddMinutes(I * TimeStep - 30))
     Next
 
     'Calculate NLDAS-2A Extraterrestrial Radiation
@@ -58,8 +69,8 @@ Public Module Program
     Dim M1 = RecordDate.Month - 2
     Dim M2 = RecordDate.Month - 1
     If RecordDate.Day >= 15 Then
-        M1 = RecordDate.Month - 1
-        M2 = RecordDate.Month
+      M1 = RecordDate.Month - 1
+      M2 = RecordDate.Month
     End If
     If M1 = -1 Then M1 = 11
     If M2 = 12 Then M2 = 0
@@ -138,7 +149,7 @@ Public Module Program
 
     'Calculate ASCE Reference Evapotranspiration (in)
     Dim ETo = CalculateHourlyASCEReferenceET(
-      Elevation, Latitude, Longitude, AirTemperature, RelativeHumidity, WindSpeed,
+      Elevation, AirTemperature, RelativeHumidity, WindSpeed,
       SolarRadiation, ProjectRa, ToFeet(2), ReferenceET.ShortReference, AirPressure
     )
     Return ETo
@@ -788,9 +799,6 @@ Public Module Program
   Public Sub Main(args() As string)
     Console.WriteLine("Hello, World!")
 
-    'Dim Output As Double = CalculateRelativeHumidity(0.0033657, 85880, 33.4)
-    'Console.WriteLine(Output)
-
     'Dim Output As Double = AdjustAirPressure(85.88, 88.57, -6.24)
     'Console.WriteLine(Output)
 
@@ -816,10 +824,11 @@ Public Module Program
     ' )
     ' Console.WriteLine(Output)
 
-   ' Dim TimeStep = 15 'minutes
+    ' Dim TimeStep = 15 'minutes
     ' Dim HourlySteps As Integer = 60 / TimeStep
     ' Dim SolarPositions(1440 / TimeStep) As SolarPosition
-    ' For I = 0 To SolarPositions.Length - 1
+    ' Dim RecordDate As DateTime = New DateTime(2017, 7, 1, 13, 0, 0, 0, DateTimeKind.Utc)
+    ' For I as Integer = 0 To SolarPositions.Length - 1
     '     SolarPositions(I) = CalculateSolarPosition(RecordDate.AddMinutes(I * TimeStep - 30))
     ' Next
 
