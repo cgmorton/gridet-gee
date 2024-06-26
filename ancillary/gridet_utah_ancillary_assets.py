@@ -7,7 +7,7 @@ import ee
 def main(project_id, overwrite_flag=False):
     """"""
 
-    logging.info('GridET Ancillary Assets')
+    logging.info('Build/Ingest GridET Ancillary Assets')
 
     ee.Initialize(project=project_id)
 
@@ -26,7 +26,7 @@ def main(project_id, overwrite_flag=False):
     aspect_id = f'{folder_id}/aspect'
     # azimuth_id = f'{folder_id}/azimuth'
 
-    mask_img = ee.Image(mask_id)
+    mask_img = ee.Image(mask_id).unmask(1)
 
     shape = mask_img.getInfo()['bands'][0]['dimensions']
     crs = mask_img.projection().wkt()
@@ -42,7 +42,7 @@ def main(project_id, overwrite_flag=False):
     )
 
     if overwrite_flag or not ee.data.getInfo(elevation_id):
-        logging.info('Building GriDET elevation asset')
+        logging.info('elevation')
         if ee.data.getInfo(elevation_id):
             ee.data.deleteAsset(elevation_id)
 
@@ -60,7 +60,7 @@ def main(project_id, overwrite_flag=False):
         task.start()
 
     if overwrite_flag or not ee.data.getInfo(latitude_id):
-        logging.info('Building GriDET latitude asset')
+        logging.info('latitude')
         if ee.data.getInfo(latitude_id):
             ee.data.deleteAsset(latitude_id)
 
@@ -77,7 +77,7 @@ def main(project_id, overwrite_flag=False):
         task.start()
 
     if overwrite_flag or not ee.data.getInfo(longitude_id):
-        logging.info('Building GriDET longitude asset')
+        logging.info('longitude')
         if ee.data.getInfo(longitude_id):
             ee.data.deleteAsset(longitude_id)
 
@@ -94,7 +94,7 @@ def main(project_id, overwrite_flag=False):
         task.start()
 
     if overwrite_flag or not ee.data.getInfo(slope_id):
-        logging.info('Building GriDET slope asset')
+        logging.info('slope')
         if ee.data.getInfo(slope_id):
             ee.data.deleteAsset(slope_id)
 
@@ -114,7 +114,7 @@ def main(project_id, overwrite_flag=False):
         task.start()
 
     if not ee.data.getInfo(aspect_id) or overwrite_flag:
-        logging.info('Building GriDET aspect asset')
+        logging.info('aspect')
         if ee.data.getInfo(aspect_id):
             ee.data.deleteAsset(aspect_id)
 
