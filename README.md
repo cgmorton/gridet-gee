@@ -1,6 +1,6 @@
 # gridet-gee
 
-Google Earth Engine implementation of the GridET model (https://github.com/claytonscottlewis/GridET).
+Google Earth Engine implementation of the GridET model (https://github.com/claytonscottlewis/GridET) reference ET calculations.
 
 ## Supported Calculations and Datasets
 
@@ -21,21 +21,7 @@ eto_img = (
     .rename(['eto'])
     .set({'system:time_start': ee.Date('2017-07-01').millis()})
 )
-```
-
-## GEE Implementation Differences
-
-The GEE implementation has a few differences with the original VB.net version that are all some variation of not being able to mimic the exact flow of calculation at the NLDAS scale, interpolation to the GridET scale, and then additional calculation.  In relatively flat areas these differences are fairly insignificant and the annual total ET values are within less than 1% of the original version.  In the mountains the differences are more significant, but are still within ~10%.
-
-* TranslateRs is being applied after spatially interpolating the NLDAS grid cell Ra and Rs to the GridET grid.
-* Air temperature is computed directly at the GridET scale using the spatially interpolated air temperature and delta Z, instead of computed for each NLDAS grid cell and then interpolating.
-* Pressure is computed directly at the GridET scale from the spatially interpolated delta Z, instead of being computed for each NLDAS grid cell and then interpolating.
-
-### Other Differences
-
-The code is currently separated into four modules (model, nldas, solar, and utils), but this was mostly done to simplify testing and may be consolidated or further split in the future.
-
-Most of the internal variables were renamed to follow the Python PEP8 convention of using all lower case for variable.  Variables that used greek letter symbols were spelled out.  The function names are still the original camel case, but will likely be modified in the future.  As much as possible, the original comments have been included.    
+``` 
 
 ## Ancillary Assets
 
@@ -50,6 +36,18 @@ The NASADEM asset (NASA/NASADEM_HGT/001) was used to generate the elevation grid
 | longitude | projects/openet/assets/reference_et/utah/gridet/ancillary/longitude |
 | slope     | projects/openet/assets/reference_et/utah/gridet/ancillary/slope     |
 | aspect    | projects/openet/assets/reference_et/utah/gridet/ancillary/aspect    |
+
+## GEE Implementation Differences
+
+The code is currently separated into four modules (model, nldas, solar, and utils), but this was mostly done to simplify testing and may be consolidated or further split in the future.
+
+Most of the internal variables were renamed to follow the Python PEP8 convention of using all lower case for variable.  Variables that used greek letter symbols were spelled out.  The function names are still the original camel case, but will likely be modified in the future.  The function doc strings have not been modified, but will likely be reformated in the future.  As much as possible, the original comments have been left in place.   
+
+The GEE implementation has a few differences with the original VB.net version that are all some variation of not being able to mimic the exact flow of calculation at the NLDAS scale, interpolation to the GridET scale, and then additional calculation.  In initial testing these code differences do not seem to significantly change the output values, but additional testing is planned.
+
+* TranslateRs is being applied after spatially interpolating the NLDAS grid cell Ra and Rs to the GridET grid.
+* Air temperature is computed directly at the GridET scale using the spatially interpolated air temperature and delta Z, instead of computed for each NLDAS grid cell and then interpolating.
+* Pressure is computed directly at the GridET scale from the spatially interpolated delta Z, instead of being computed for each NLDAS grid cell and then interpolating.
 
 ##  References
 
