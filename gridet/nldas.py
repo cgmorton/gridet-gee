@@ -49,30 +49,45 @@ def etsz(nldas_img, surface):
         .select(['temperature', 'specific_humidity', 'pressure', 'wind_u', 'wind_v', 'shortwave_radiation'])
     )
 
-    # Load the NLDAS ancillary assets (elevation)
-    nldas_elevation = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/elevation')
-    nldas_latitude = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/latitude')
-    nldas_longitude = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/longitude')
-    nldas_slope = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/slope')
-    nldas_aspect = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/aspect')
+    # Load the GridET NLDAS ancillary assets (note elevation is in feet)
+    nldas_elevation = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/nldas2_elevation')
+    nldas_aspect = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/nldas2_aspect')
+    nldas_slope = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/nldas2_slope')
+    nldas_latitude = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/nldas2_latitude')
+    nldas_longitude = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/nldas2_longitude')
+    # nldas_elevation = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/elevation')
+    # nldas_aspect = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/aspect')
+    # nldas_slope = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/slope')
+    # nldas_latitude = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/latitude')
+    # nldas_longitude = ee.Image('projects/openet/assets/meteorology/nldas/ancillary/longitude')
 
     # TODO: Pass in as input parameters
     # Load the GridET ancillary assets (elevation, lat, lon, slope, aspect)
     elevation = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/elevation')
+    aspect = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/aspect')
+    slope = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/slope')
     latitude = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/latitude')
     longitude = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/longitude')
-    slope = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/slope')
-    aspect = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/aspect')
 
+    mask_img = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/mask')
+    mask_crs = mask_img.projection().wkt()
+    mask_transform = ee.List(ee.Dictionary(ee.Algorithms.Describe(mask_img.projection())).get('transform'))
+
+    # CGM - Commenting out for now since GridET elevation assets are already in feet
     # Convert elevations to feet
-    elevation = utils.ToFeet(elevation)
-    nldas_elevation = utils.ToFeet(nldas_elevation)
+    # elevation = utils.ToFeet(elevation)
+    # nldas_elevation = utils.ToFeet(nldas_elevation)
 
     # Elevation difference between GridET elevation and interpolated NLDAS elevation
     # CGM - This is slightly different then the approach in GridET
-    #   where they compute DeltaZ for the NLDAS grid cells then interpolate
-    #   I'm not sure how to implement that exact approach in GEE yet
-    delta_z = elevation.subtract(nldas_elevation.resample('bilinear')).rename('delta_z')
+    #   where DeltaZ is computed for the NLDAS grid cells then interpolated
+    # CGM - The bilinear resampling was not working correctly in initial testing
+    delta_z = (
+        elevation
+        .subtract(nldas_elevation)
+        # .subtract(nldas_elevation.resample('bilinear').reproject(mask_crs, mask_transform))
+        .rename('delta_z')
+    )
 
     # NLDAS wind speed is at 10m but is corrected down to 2m when read in below
     # The Reference ET function in this module is expecting the height in feet
@@ -151,7 +166,7 @@ def etsz(nldas_img, surface):
         pressure=pressure,
         solar_position=solar.CalculateSolarPosition(record_date),
     )
-    for minute_offset in [-30, -15, 15]:
+    for minute_offset in [-30, -15, 15, 30]:
         temp_ra = solar.CalculateInstantaneousRa(
             longitude=longitude,
             latitude=latitude,
@@ -163,40 +178,39 @@ def etsz(nldas_img, surface):
             solar_position=solar.CalculateSolarPosition(record_date.advance(minute_offset, 'minute')),
         )
         project_ra = project_ra.add(temp_ra)
-    project_ra = project_ra.divide(4)
+    project_ra = project_ra.divide(5)
 
-    # Then compute Ra at the NLDAS grid scale using the raw/source NLDAS data
     nldas_source_ra = solar.CalculateInstantaneousRa(
         longitude=nldas_longitude,
         latitude=nldas_latitude,
         elevation=nldas_elevation,
         slope=nldas_slope,
         azimuth=nldas_aspect,
-        temperature=utils.ToFahrenheit(nldas_source.select(['pressure'])),
+        temperature=utils.ToFahrenheit(nldas_source.select(['temperature'])),
         pressure=nldas_source.select(['pressure']).divide(1000),
         solar_position=solar.CalculateSolarPosition(record_date),
     )
-    for minute_offset in [-30, -15, 15]:
+    for minute_offset in [-30, -15, 15, 30]:
         temp_ra = solar.CalculateInstantaneousRa(
             longitude=nldas_longitude,
             latitude=nldas_latitude,
             elevation=nldas_elevation,
             slope=nldas_slope,
             azimuth=nldas_aspect,
-            temperature=utils.ToFahrenheit(nldas_source.select(['pressure'])),
+            temperature=utils.ToFahrenheit(nldas_source.select(['temperature'])),
             pressure=nldas_source.select(['pressure']).divide(1000),
             solar_position=solar.CalculateSolarPosition(record_date.advance(minute_offset, 'minute')),
         )
         nldas_source_ra = nldas_source_ra.add(temp_ra)
-    nldas_source_ra = nldas_source_ra.divide(4)
-
-    nldas_source_rs = utils.ToLangleysPerHour(nldas_source.select(['shortwave_radiation']))
+    nldas_source_ra = nldas_source_ra.divide(5)
 
     # Bilinearly interpolate NLDAS Ra and Rs to the GridET grid before TranslateRs call
     # CGM - This is slightly different than GridET approach since
     #   TranslateRs is being applied after interpolating the NLDAS Ra and Rs
     nldas_interp_ra = nldas_source_ra.resample('bilinear').rename('ra')
-    nldas_interp_rs = nldas_source_rs.resample('bilinear').rename('rs')
+    nldas_interp_rs = utils.ToLangleysPerHour(
+        nldas_source.select(['shortwave_radiation']).resample('bilinear').rename('rs')
+    )
 
     # Solar Radiation (Langley/hr)
     rs = solar.TranslateRs(

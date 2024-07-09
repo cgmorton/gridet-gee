@@ -202,7 +202,7 @@ def AdjustAirPressure(pressure, temperature, delta_z):
     g = 32.174
 
     # Gas Constant for Air (ft-lb/(slug-R))
-    r = 1716
+    r = 1716.0
 
     return pressure.expression(
         'P / exp(G * delta_z / (R * T))',

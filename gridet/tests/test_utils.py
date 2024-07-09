@@ -19,6 +19,12 @@ def test_ToRadians():
     assert abs(float(utils.ToRadians(ee.Number(360)).getInfo()) - (2 * math.pi)) < 0.0001
 
 
+def test_ToFeet():
+    # Note, the feet converion in GridET is for survey feet
+    assert float(utils.ToFeet(ee.Number(2)).getInfo()) == 6.561666666666671
+    # assert float(utils.ToFeet(ee.Number(2)).getInfo()) == 2 / 0.3048
+
+
 @pytest.mark.parametrize(
     'angle, expected',
     [
