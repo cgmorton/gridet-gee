@@ -84,13 +84,13 @@ def etsz(nldas_img, surface):
     # CGM - The bilinear resampling was not working correctly in initial testing
     delta_z = (
         elevation
-        .subtract(nldas_elevation)
+        .subtract(nldas_elevation.resample('bilinear'))
         # .subtract(nldas_elevation.resample('bilinear').reproject(mask_crs, mask_transform))
         .rename('delta_z')
     )
 
     # NLDAS wind speed is at 10m but is corrected down to 2m when read in below
-    # The Reference ET function in this module is expecting the height in feet
+    # Note, the Reference ET function in this module is expecting the height in feet
     anemometer_height = utils.ToFeet(ee.Number(2))
 
     # GLOBALS
@@ -204,13 +204,13 @@ def etsz(nldas_img, surface):
         nldas_source_ra = nldas_source_ra.add(temp_ra)
     nldas_source_ra = nldas_source_ra.divide(5)
 
+    nldas_source_rs = utils.ToLangleysPerHour(nldas_source.select(['shortwave_radiation']))
+
     # Bilinearly interpolate NLDAS Ra and Rs to the GridET grid before TranslateRs call
     # CGM - This is slightly different than GridET approach since
     #   TranslateRs is being applied after interpolating the NLDAS Ra and Rs
     nldas_interp_ra = nldas_source_ra.resample('bilinear').rename('ra')
-    nldas_interp_rs = utils.ToLangleysPerHour(
-        nldas_source.select(['shortwave_radiation']).resample('bilinear').rename('rs')
-    )
+    nldas_interp_rs = nldas_source_rs.resample('bilinear').rename('rs')
 
     # Solar Radiation (Langley/hr)
     rs = solar.TranslateRs(
@@ -243,7 +243,8 @@ def etsz(nldas_img, surface):
         temperature=nldas_source.select(['temperature']),
     )
     relative_humidity = (
-        nldas_source_rh.resample('bilinear')
+        nldas_source_rh
+        .resample('bilinear')
         .multiply(1 - HumidityCorrectionCoefficients[5])
         .subtract(utils.SumProduct(time_variables, HumidityCorrectionCoefficients[:5]))
         .clamp(7, 100)

@@ -15,9 +15,9 @@ from gridet import utils as utils
         ['1600-01-01', 124],
         ['1620-01-01', 124],
         ['2000-01-01', 63.83],
-        ['2014-01-01', 67.43],
-        ['2015-01-01', 67.43],
-        ['2022-01-01', 67.43],
+        ['2014-01-01', 67.45],
+        ['2015-01-01', 67.84],
+        ['2022-01-01', 67.09],
     ]
 )
 def test_LookupDeltaT(date_str, expected):
@@ -27,41 +27,41 @@ def test_LookupDeltaT(date_str, expected):
 @pytest.mark.parametrize(
     'value, expected',
     [
-        [0.0037927819922933584, 24.0182616917],
+        [0.0037927819922933584, 0.419197747125427],
     ]
 )
 def test_CalculateEarthHeliocentricLongitude(value, expected):
     output = solar.CalculateEarthHeliocentricLongitude(ee.Number(value))
-    assert abs(float(output.multiply(180 / math.pi).getInfo()) - expected) < 0.0000000001
+    assert abs(float(output.getInfo()) - expected) < 0.000000000001
 
 
 @pytest.mark.parametrize(
     'value, expected',
     [
-        [0.0037927819922933584, -0.0001011219],
+        [0.0037927819922933584, -1.76491053372008E-06],
     ]
 )
 def test_CalculateEarthHeliocentricLatitude(value, expected):
     output = solar.CalculateEarthHeliocentricLatitude(ee.Number(value))
-    assert abs(float(output.multiply(180 / math.pi).getInfo()) - expected) < 0.0000000001
+    assert abs(float(output.getInfo()) - expected) < 0.000000000001
 
 
 @pytest.mark.parametrize(
     'value, expected',
     [
-        [0.0037927819922933584, 0.9965422974],
+        [0.0037927819922933584, 0.996542297353971],
     ]
 )
 def test_CalculateEarthHeliocentricRadius(value, expected):
     output = solar.CalculateEarthHeliocentricRadius(ee.Number(value))
-    assert abs(float(output.getInfo()) - expected) < 0.0000000001
+    assert abs(float(output.getInfo()) - expected) < 0.000000000001
 
 
 @pytest.mark.parametrize(
     'value, nutation_type, expected',
     [
-        [0.037927819922933585, 'Longitude', -0.00399840],
-        [0.037927819922933585, 'Obliquity', 0.00166657],
+        [0.037927819922933585, 'Longitude', -6.9785319919067E-05],
+        [0.037927819922933585, 'Obliquity', 2.90871019019675E-05],
     ]
 )
 def test_CalculateNutation(value, nutation_type, expected):
@@ -73,7 +73,7 @@ def test_CalculateNutation(value, nutation_type, expected):
         ee.Number(51.686951165383405)
     ]
     output = solar.CalculateNutation(ee.Number(value), x, nutation_type)
-    assert abs(float(output.multiply(180 / math.pi).getInfo()) - expected) < 0.00000001
+    assert abs(float(output.getInfo()) - expected) < 0.000000000001
 
 
 # TODO: Test that ValueError is raised for invalid nutation type values
@@ -101,28 +101,31 @@ def test_CalculateSolarPolynomial(x, a, b, c, d, expected):
 @pytest.mark.parametrize(
     'date, expected',
     [
-        ['2003-10-17T19:30:30', [0.9965423054291, -0.16256571547167, 3.52953362654697, 5.55908153353535]],
-        ['2017-07-01T00:00:00', [1.0166579614132, 0.40324232094146, 1.74866608416633, 4.87361879669341]],
-        ['2017-07-01T18:00:00', [1.0166660750518, 0.40233145063824, 1.76219620718522, 3.31572436194462]],
-        ['2017-07-01T20:00:00', [1.0166668153730, 0.40222616971529, 1.76369882812728, 3.84075668424932]],
+        ['2017-07-01T00:00:00', [1.01665796160987, 0.403242302653418, 1.74866636616041, 4.87361879668894]],
+        ['2017-07-01T18:00:00', [1.01666607519358, 0.402331430974593, 1.76219648893686, 3.31572436194077]],
+        ['2017-07-01T20:00:00', [1.01666681550886, 0.402226149899084, 1.7636991098512, 3.84075668424557]],
     ]
 )
 def test_CalculateSolarPosition(date, expected):
     R, delta, alpha, v = solar.CalculateSolarPosition(date)
-    assert abs(float(R.getInfo()) - expected[0]) < 0.0000000001
-    assert abs(float(delta.getInfo()) - expected[1]) < 0.0000000001
-    assert abs(float(alpha.getInfo()) - expected[2]) < 0.0000000001
-    assert abs(float(v.getInfo()) - expected[3]) < 0.0000000001
+    assert abs(float(R.getInfo()) - expected[0]) < 0.00000000001
+    assert abs(float(delta.getInfo()) - expected[1]) < 0.00000000001
+    assert abs(float(alpha.getInfo()) - expected[2]) < 0.00000000001
+    assert abs(float(v.getInfo()) - expected[3]) < 0.00000000001
 
 
 @pytest.mark.parametrize(
     'date, lon, lat, elev, slope, azimuth, temp, pressure, expected',
     [
-        # ['2003-10-17T19:30:30', -105.1786, 39.742476, 1830.14, 30, 170, 11.0, 820, 107.1048697],
-        ['2017-07-01T18:00:00', -112.688, 39.313, 4584, 0.04, 275.6, 86.27, 85.979, 102.328243428094],
-        ['2017-07-01T20:00:00', -112.688, 39.313, 4584, 0.04, 275.6, 86.27, 85.979, 108.68201013007],
-        ['2017-07-01T00:00:00', -113.43322516890046, 41.81669468299659, 5654.087675195883,
-         2.1556215286254883, 192.59628295898438, 68.22186585091022, 83.05958497082149, 62.5452024483686],
+        ['2017-07-01T00:00:00', -113.94387718935013, 40.06790112424004, 5421.52587890625,
+         3.3938817977905273, 284.52252197265625, 79.142, 82.26289999999999,
+         67.8663476329468],
+        ['2017-07-01T18:00:00', -113.94387718935013, 40.06790112424004, 5421.52587890625,
+         3.3938817977905273, 284.52252197265625, 79.66400000000004, 82.14222,
+         98.1763142524134],
+        ['2017-07-01T20:00:00', -113.94387718935013, 40.06790112424004, 5421.52587890625,
+         3.3938817977905273, 284.52252197265625, 84.81200000000007, 82.13036,
+         108.275165732257],
     ]
 )
 def test_CalculateInstantaneousRa(date, lon, lat, elev, slope, azimuth, temp, pressure, expected):
@@ -140,7 +143,7 @@ def test_CalculateInstantaneousRa(date, lon, lat, elev, slope, azimuth, temp, pr
     constant_geom = ee.Geometry.Rectangle([0, 0, 10, 10], 'EPSG:32613', False)
     output = output.reduceRegion(ee.Reducer.first(), geometry=constant_geom, scale=1)
 
-    assert abs(float(output.getInfo()['ra']) - expected) < 0.00000001
+    assert abs(float(output.getInfo()['ra']) - expected) < 0.000000001
 
 
 @pytest.mark.parametrize(

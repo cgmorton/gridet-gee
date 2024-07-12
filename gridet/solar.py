@@ -135,7 +135,6 @@ def CalculateInstantaneousRa(
     gamma_c = hp.cos().multiply(phi.sin()).subtract(delta_p.tan().multiply(phi.cos())).atan2(hp.sin())
 
     # Topocentric Azimuth Angle (radians)
-    # CGM - This isn't used anywhere, commenting out for now (instead of modifying)
     # phi_c = utils.LimitAngle(gamma_c.add(math.pi))
 
     # Incidence Angle for a Surface Oriented in Any Direction
@@ -150,8 +149,13 @@ def CalculateInstantaneousRa(
     gsc = 1367.0
 
     # Extraterrestrial Radiation (W/m^2)
+    # Updated calculation
+    # Dim Ra As Double = If(θ >= 0 AndAlso θ <= π / 2 AndAlso I <= π / 2, Gsc * Math.Cos(I) / SolarPosition.R ^ 2, 0)
     ra = i.cos().multiply(gsc).divide(sp_r.pow(2))
-    ra = ra.where(e.lte(0).Or(i.multiply(-1).add(math.pi / 2).lte(0)), 0)
+    ra = ra.where(theta.lt(0).Or(theta.gt(math.pi / 2)).Or(i.gt(math.pi / 2)), 0)
+    # # Original calculation
+    # # Dim Ra As Double = If e > 0 And π / 2 - I > 0 Then Ra = Gsc * Math.Cos(I) / SolarPosition.R ^ 2
+    # ra = ra.where(e.lte(0).Or(i.multiply(-1).add(math.pi / 2).lte(0)), 0)
 
     return utils.ToLangleysPerHour(ra).rename(['ra'])
 
@@ -200,7 +204,7 @@ def CalculateSolarPosition(record_date):
     jme = jce.divide(10)
 
     # Earth Heliocentric Longitude (radians)
-    l = CalculateEarthHeliocentricLongitude(jme)
+    l = utils.LimitAngle(CalculateEarthHeliocentricLongitude(jme))
 
     # Earth Heliocentric Latitude (radians)
     b = CalculateEarthHeliocentricLatitude(jme)
@@ -303,6 +307,7 @@ def LookupDeltaT(record_date):
     # <returns>Time Difference (seconds)</returns>
     # <remarks>
     # Source: http://asa.usno.navy.mil/SecK/DeltaT.html (link is dead)
+    # Source: ftp://maia.usno.navy.mil/ser7/deltat.data
     # Source: https://maia.usno.navy.mil/products/deltaT
     # </remarks>
 
@@ -351,7 +356,8 @@ def LookupDeltaT(record_date):
         56.86, 57.57, 58.31, 59.12, 59.99, 60.78, 61.63, 62.30, 62.97, 63.47,
         # 2000
         63.83, 64.09, 64.30, 64.47, 64.57, 64.69, 64.85, 65.15, 65.46, 65.78,
-        66.20, 66.45, 66.74, 67.09, 67.43,
+        66.20, 66.45, 66.74, 67.09, 67.45, 67.84, 68.35, 68.78, 69.09, 66.20,
+        66.45, 66.74, 67.09, 67.45, 67.84, 68.35, 68.78, 69.09,
         # # CGM - Updated values from new DeltaT link starting in 1974
         # #   and predicted values for 2025-2033
         # # 1900

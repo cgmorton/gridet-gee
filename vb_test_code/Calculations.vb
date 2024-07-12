@@ -103,6 +103,7 @@ Public Module Program
 
     'Correct for Topographical Differences
     Dim ΔZ = Elevation - NLDAS_Elevation
+    ' Console.WriteLine(ΔZ)
 
     'Air Temperature (F)
     AirTemperature += LapseRate * ΔZ
@@ -115,26 +116,83 @@ Public Module Program
 
     'Air Pressure (kPa)
     AirPressure = AdjustAirPressure(AirPressure, AirTemperature, ΔZ)
-    'Return AirPressure
+
+    ' Console.WriteLine("")
+    ' Console.WriteLine("Project Ra Inputs")
+    ' Console.WriteLine(Longitude)
+    ' Console.WriteLine(Latitude)
+    ' Console.WriteLine(Elevation)
+    ' Console.WriteLine(Slope)
+    ' Console.WriteLine(Aspect)
+    ' Console.WriteLine(AirTemperature)
+    ' Console.WriteLine(AirPressure)
+    ' 'Console.WriteLine(SolarPositions(0)
 
     'Solar Radiation (Langley/hr)
+    ' Console.WriteLine("")
+    ' Console.WriteLine("Project Ra Iteration")
     Dim ProjectRa As Double = 0
+    Dim TempRa As Double = 0
     Dim Start As Integer = H * HourlySteps
     For J As Integer = Start To Start + HourlySteps
-      ProjectRa += CalculateInstantaneousRa(
+      ' Console.WriteLine("")
+      ' Console.WriteLine(J)
+      TempRa = CalculateInstantaneousRa(
         Longitude, Latitude, Elevation, Slope, Aspect, AirTemperature, AirPressure, SolarPositions(J)
       )
+      ProjectRa += TempRa
+      ' Console.WriteLine(TempRa)
     Next
     Dim HourlyAverage As Integer = HourlySteps + 1
     ProjectRa /= HourlyAverage
+    ' Console.WriteLine("")
+    ' Console.WriteLine("Project Average Ra")
+    ' Console.WriteLine(ProjectRa)
 
+    ' Console.WriteLine("")
+    ' Console.WriteLine("NLDAS Ra Inputs")
+    ' Console.WriteLine(NLDAS_Longitude)
+    ' Console.WriteLine(NLDAS_Latitude)
+    ' Console.WriteLine(NLDAS_Elevation)
+    ' Console.WriteLine(NLDAS_Slope)
+    ' Console.WriteLine(NLDAS_Aspect)
+    ' Console.WriteLine(NLDAS_AirTemperature)
+    ' Console.WriteLine(NLDAS_AirPressure)
+    ' ' Console.WriteLine(SolarPositions(0)
+
+    ' Console.WriteLine("")
+    ' Console.WriteLine("NLDAS Ra Iteration")
     Dim NLDAS_Ra As New Double
     For J As Integer = Start To Start + HourlySteps
-      NLDAS_Ra += NLDAS_RaPixels(J)
+      ' Console.WriteLine("")
+      ' Console.WriteLine(J)
+      TempRa = NLDAS_RaPixels(J)
+      NLDAS_Ra += TempRa
+      ' Console.WriteLine(TempRa)
     Next
     NLDAS_Ra /= HourlyAverage
 
+    ' Console.WriteLine("")
+    ' Console.WriteLine("NLDAS Rs")
+    ' Console.WriteLine(NLDAS_Rs)
+
+    ' Console.WriteLine("")
+    ' Console.WriteLine("NLDAS Average Ra")
+    ' Console.WriteLine(NLDAS_Ra)
+
+    ' Console.WriteLine("")
+    ' Console.WriteLine("Project Ra")
+    ' Console.WriteLine(ProjectRa)
+
+    ' Console.WriteLine("")
+    ' Console.WriteLine("Slope")
+    ' Console.WriteLine(Slope)
+
     Dim SolarRadiation As Double = TranslateRs(NLDAS_Rs, NLDAS_Ra, ProjectRa, Slope)
+
+    ' Console.WriteLine("")
+    ' Console.WriteLine("Rs")
+    ' Console.WriteLine(SolarRadiation)
 
     'Relative Humidity (%)
     Dim RelativeHumidity = NLDAS_RH
@@ -142,20 +200,35 @@ Public Module Program
     RelativeHumidity -= SumProduct(HumidityCorrectionCoefficients, TimeVariables)
     If RelativeHumidity > 100 Then RelativeHumidity = 100
     If RelativeHumidity < 7 Then RelativeHumidity = 7
+    ' Console.WriteLine("")
+    ' Console.WriteLine("RelativeHumidity")
+    ' Console.WriteLine(RelativeHumidity)
 
     'Wind Speed (mph)
     Dim WindSpeed = (NLDAS_WindU ^ 2 + NLDAS_WindV ^ 2) ^ 0.5
     If WindSpeed > 5.5 Then WindSpeed = 5.5
+    ' Console.WriteLine("")
+    ' Console.WriteLine("WindSpeed")
+    ' Console.WriteLine(WindSpeed)
+
+    ' Console.WriteLine("")
+    ' Console.WriteLine("Reference ET Inputs")
+    ' Console.WriteLine(Elevation)
+    ' Console.WriteLine(AirTemperature)
+    ' Console.WriteLine(RelativeHumidity)
+    ' Console.WriteLine(WindSpeed)
+    ' Console.WriteLine(SolarRadiation)
+    ' Console.WriteLine(ProjectRa)
+    ' Console.WriteLine(AirPressure)
 
     'Calculate ASCE Reference Evapotranspiration (in)
     Dim ETo = CalculateHourlyASCEReferenceET(
       Elevation, AirTemperature, RelativeHumidity, WindSpeed,
-      SolarRadiation, ProjectRa, ToFeet(2), ReferenceET.ShortReference, AirPressure
+      SolarRadiation, ProjectRa, ToFeet(2), ReferenceETType.ShortReference, AirPressure
     )
     Return ETo
 
   End Function
-
 
 
   ''' <summary>
@@ -168,11 +241,11 @@ Public Module Program
   ''' <param name="ExtraterrestrialRadiation">Total Hourly Extraterrestrial Solar Radiation (Langleys)</param>
   ''' <param name="WindSpeed">Average Hourly Wind Speed (Miles/Hour)</param>
   ''' <param name="AnemometerHeight">Height of Anemometer from the Ground (Feet)</param>
-  ''' <param name="ReferenceET">Short(Grass) or Long(Alfalfa) Reference Height</param>
+  ''' <param name="ReferenceETType">Short(Grass) or Tall(Alfalfa) Reference Height</param>
   ''' <param name="AirPressure">Average Hourly Air Pressure (kiloPascals)</param>
   ''' <returns>Estimated Reference Evapotranspiration (Inches/Hour)</returns>
   ''' <remarks>Source: ASCE Standardized Reference Evapotranspiration Equation (2005)</remarks>
-  Function CalculateHourlyASCEReferenceET(ByVal Elevation As Double, ByVal AirTemperature As Double, ByVal RelativeHumidity As Double, ByVal WindSpeed As Double, ByVal SolarRadiation As Double, ByVal ExtraterrestrialRadiation As Double, ByVal AnemometerHeight As Double, ByVal ReferenceET As ReferenceET, Optional ByVal AirPressure As Double = Double.MinValue)
+  Function CalculateHourlyASCEReferenceET(ByVal Elevation As Double, ByVal AirTemperature As Double, ByVal RelativeHumidity As Double, ByVal WindSpeed As Double, ByVal SolarRadiation As Double, ByVal ExtraterrestrialRadiation As Double, ByVal AnemometerHeight As Double, ByVal ReferenceETType As ReferenceETType, Optional ByVal AirPressure As Double = Double.MinValue)
     'Mean Air Temperature (°C)
     Dim T As Double = ToCelsius(AirTemperature)
 
@@ -242,23 +315,23 @@ Public Module Program
 
     'Assignment of Reference Values
     If Rn >= 0 Then
-      Select Case ReferenceET
-        Case ReferenceET.ShortReference
+      Select Case ReferenceETType
+        Case ReferenceETType.ShortReference
           G = 0.1 * Rn
           Cn = 37
           Cd = 0.24
-        Case ReferenceET.LongReference
+        Case ReferenceETType.TallReference
           G = 0.04 * Rn
           Cn = 66
           Cd = 0.25
       End Select
     Else
-      Select Case ReferenceET
-        Case ReferenceET.ShortReference
+      Select Case ReferenceETType
+        Case ReferenceETType.ShortReference
           G = 0.5 * Rn
           Cn = 37
           Cd = 0.96
-        Case ReferenceET.LongReference
+        Case ReferenceETType.TallReference
           G = 0.2 * Rn
           Cn = 66
           Cd = 1.7
@@ -346,8 +419,8 @@ Public Module Program
     'Topocentric Astronomers Azimuth Angle (radians)
     Dim Γc As Double = Math.Atan2(Math.Sin(Hp), CosHp * Sinϕ - Math.Tan(δp) * Cosϕ)
 
-    'Topocentric Azimuth Angle (radians)
-    Dim Φ As Double = LimitAngle(Γc + π)
+    ''Topocentric Azimuth Angle (radians)
+    'Dim Φ As Double = LimitAngle(Γc + π)
 
     'Incidence Angle for a Surface Oriented in Any Direction
     Dim I As Double = Math.Acos(Math.Cos(θ) * Math.Cos(ω) + Math.Sin(ω) * Math.Sin(θ) * Math.Cos(Γc - γ))
@@ -356,8 +429,7 @@ Public Module Program
     Dim Gsc As Double = 1367
 
     'Extraterrestrial Radiation (W/m^2)
-    Dim Ra As Double = 0
-    If e > 0 And π / 2 - I > 0 Then Ra = Gsc * Math.Cos(I) / SolarPosition.R ^ 2
+    Dim Ra As Double = If(θ >= 0 AndAlso θ <= π / 2 AndAlso I <= π / 2, Gsc * Math.Cos(I) / SolarPosition.R ^ 2, 0)
 
     Return ToLangleysPerHour(Ra)
   End Function
@@ -447,7 +519,7 @@ Public Module Program
     Dim JME As Double = JCE / 10
 
     'Earth Heliocentric Longitude (radians)
-    Dim L As Double = CalculateEarthHeliocentricProperty(JME, EarthHeliocentricType.Longitude)
+    Dim L As Double = LimitAngle(CalculateEarthHeliocentricProperty(JME, EarthHeliocentricType.Longitude))
 
     'Earth Heliocentric Latitude (radians)
     Dim B As Double = CalculateEarthHeliocentricProperty(JME, EarthHeliocentricType.Latitude)
@@ -523,7 +595,7 @@ Public Module Program
   ''' <param name="RecordDate">Event Time</param>
   ''' <returns>Time Difference (seconds)</returns>
   Function LookupΔT(ByVal RecordDate As DateTime) As Double
-    Dim ΔT = New Double() {124, 119, 115, 110, 106, 102, 98, 95, 91, 88, 85, 82, 79, 77, 74, 72, 70, 67, 65, 63, 62, 60, 58, 57, 55, 54, 53, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 38, 37, 36, 35, 34, 33, 32, 31, 30, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 14, 13, 12, 12, 11, 11, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 16, 16, 16, 16, 15, 15, 14, 14, 13.7, 13.4, 13.1, 12.9, 12.7, 12.6, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.4, 12.3, 12.2, 12, 11.7, 11.4, 11.1, 10.6, 10.2, 9.6, 9.1, 8.6, 8, 7.5, 7, 6.6, 6.3, 6, 5.8, 5.7, 5.6, 5.6, 5.6, 5.7, 5.8, 5.9, 6.1, 6.2, 6.3, 6.5, 6.6, 6.8, 6.9, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.7, 7.8, 7.8, 7.88, 7.82, 7.54, 6.97, 6.4, 6.02, 5.41, 4.1, 2.92, 1.82, 1.61, 0.1, -1.02, -1.28, -2.69, -3.24, -3.64, -4.54, -4.71, -5.11, -5.4, -5.42, -5.2, -5.46, -5.46, -5.79, -5.63, -5.64, -5.8, -5.66, -5.87, -6.01, -6.19, -6.64, -6.44, -6.47, -6.09, -5.76, -4.66, -3.74, -2.72, -1.54, -0.02, 1.24, 2.64, 3.86, 5.37, 6.14, 7.75, 9.13, 10.46, 11.53, 13.36, 14.65, 16.01, 17.2, 18.24, 19.06, 20.25, 20.95, 21.16, 22.25, 22.41, 23.03, 23.49, 23.62, 23.86, 24.49, 24.34, 24.08, 24.02, 24, 23.87, 23.95, 23.86, 23.93, 23.73, 23.92, 23.96, 24.02, 24.33, 24.83, 25.3, 25.7, 26.24, 26.77, 27.28, 27.78, 28.25, 28.71, 29.15, 29.57, 29.97, 30.36, 30.72, 31.07, 31.35, 31.68, 32.18, 32.68, 33.15, 33.59, 34, 34.47, 35.03, 35.73, 36.54, 37.43, 38.29, 39.2, 40.18, 41.17, 42.23, 43.37, 44.49, 45.48, 46.46, 47.52, 48.53, 49.59, 50.54, 51.38, 52.17, 52.96, 53.79, 54.34, 54.87, 55.32, 55.82, 56.3, 56.86, 57.57, 58.31, 59.12, 59.99, 60.78, 61.63, 62.3, 62.97, 63.47, 63.83, 64.09, 64.3, 64.47, 64.57, 64.69, 64.85, 65.15, 65.46, 65.78, 66.2, 66.45, 66.74, 67.09, 67.43}
+    Dim ΔT = New Double() {124, 119, 115, 110, 106, 102, 98, 95, 91, 88, 85, 82, 79, 77, 74, 72, 70, 67, 65, 63, 62, 60, 58, 57, 55, 54, 53, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 38, 37, 36, 35, 34, 33, 32, 31, 30, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 14, 13, 12, 12, 11, 11, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 16, 16, 16, 16, 15, 15, 14, 14, 13.7, 13.4, 13.1, 12.9, 12.7, 12.6, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.4, 12.3, 12.2, 12, 11.7, 11.4, 11.1, 10.6, 10.2, 9.6, 9.1, 8.6, 8, 7.5, 7, 6.6, 6.3, 6, 5.8, 5.7, 5.6, 5.6, 5.6, 5.7, 5.8, 5.9, 6.1, 6.2, 6.3, 6.5, 6.6, 6.8, 6.9, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.7, 7.8, 7.8, 7.88, 7.82, 7.54, 6.97, 6.4, 6.02, 5.41, 4.1, 2.92, 1.82, 1.61, 0.1, -1.02, -1.28, -2.69, -3.24, -3.64, -4.54, -4.71, -5.11, -5.4, -5.42, -5.2, -5.46, -5.46, -5.79, -5.63, -5.64, -5.8, -5.66, -5.87, -6.01, -6.19, -6.64, -6.44, -6.47, -6.09, -5.76, -4.66, -3.74, -2.72, -1.54, -0.02, 1.24, 2.64, 3.86, 5.37, 6.14, 7.75, 9.13, 10.46, 11.53, 13.36, 14.65, 16.01, 17.2, 18.24, 19.06, 20.25, 20.95, 21.16, 22.25, 22.41, 23.03, 23.49, 23.62, 23.86, 24.49, 24.34, 24.08, 24.02, 24, 23.87, 23.95, 23.86, 23.93, 23.73, 23.92, 23.96, 24.02, 24.33, 24.83, 25.3, 25.7, 26.24, 26.77, 27.28, 27.78, 28.25, 28.71, 29.15, 29.57, 29.97, 30.36, 30.72, 31.07, 31.35, 31.68, 32.18, 32.68, 33.15, 33.59, 34, 34.47, 35.03, 35.73, 36.54, 37.43, 38.29, 39.2, 40.18, 41.17, 42.23, 43.37, 44.49, 45.48, 46.46, 47.52, 48.53, 49.59, 50.54, 51.38, 52.17, 52.96, 53.79, 54.34, 54.87, 55.32, 55.82, 56.3, 56.86, 57.57, 58.31, 59.12, 59.99, 60.78, 61.63, 62.3, 62.97, 63.47, 63.83, 64.09, 64.3, 64.47, 64.57, 64.69, 64.85, 65.15, 65.46, 65.78, 66.2, 66.45, 66.74, 67.09, 67.45, 67.84, 68.35, 68.78, 69.09}
 
     Dim Y_Index As Double = RecordDate.Year - 1620
     Dim Y_Min As Double = 0
@@ -737,6 +809,7 @@ Public Module Program
     Return MilesPerHour * 0.44704
   End Function
 
+
   ''' <summary>
   ''' Container for geocentric sun angles and distance at a given instant in time.
   ''' </summary>
@@ -769,6 +842,7 @@ Public Module Program
     End Sub
   End Class
 
+
   Function Limit(ByRef Value As Double, ByRef Lower As Double, ByRef Upper As Double) As Double
     If Value < Lower Then
       Return Lower
@@ -779,8 +853,9 @@ Public Module Program
     End If
   End Function
 
-  Enum ReferenceET
-    LongReference
+
+  Enum ReferenceETType
+    TallReference
     ShortReference
   End Enum
 
@@ -799,15 +874,57 @@ Public Module Program
   Public Sub Main(args() As string)
     Console.WriteLine("Hello, World!")
 
-    'Dim Output As Double = AdjustAirPressure(85.88, 88.57, -6.24)
-    'Console.WriteLine(Output)
+    ' 'Dim AirPressure As Double = AdjustAirPressure(85.88, 88.57, -6.24)
+    ' Dim AirPressure As Double = AdjustAirPressure(83.61585999999998, 79.83377333896347, -50.028510677078884)
+    ' Console.WriteLine(AirPressure)
 
-    'Dim Output As Double = CalculateWindSpeedAdjustmentFactor(ToFeet(10))
-    'Console.WriteLine(Output)
+    ' Dim Output2 As Double = CalculateWindSpeedAdjustmentFactor(ToFeet(2))
+    ' Console.WriteLine(Output2)
+    ' Dim Output10 As Double = CalculateWindSpeedAdjustmentFactor(ToFeet(10))
+    ' Console.WriteLine(Output10)
+
+    'Dim Output1 As Double = AdjustAirPressure(85.88, 88.57, -6.24)
+    'Console.WriteLine(Output1)
+
+    ' Dim JME As Double = 0.0037927819922933584
+    ' Dim L As Double = CalculateEarthHeliocentricProperty(JME, EarthHeliocentricType.Longitude)
+    ' Dim B As Double = CalculateEarthHeliocentricProperty(JME, EarthHeliocentricType.Latitude)
+    ' Dim R As Double = CalculateEarthHeliocentricProperty(JME, EarthHeliocentricType.Radius)
+    ' Console.WriteLine(L)
+    ' Console.WriteLine(B)
+    ' Console.WriteLine(R)
+
+    ' Dim JCE As Double = 0.037927819922933585
+    ' Dim X(4) As Double
+    ' X(0) = CalculateSolarPolynomial(JCE, 1 / 189474, -0.0019142, 445267.11148, 297.85036)
+    ' X(1) = CalculateSolarPolynomial(JCE, 1 / -300000, -0.0001603, 35999.05034, 357.52772)
+    ' X(2) = CalculateSolarPolynomial(JCE, 1 / 56250, 0.0086972, 477198.867398, 134.96298)
+    ' X(3) = CalculateSolarPolynomial(JCE, 1 / 327270, -0.0036825, 483202.017538, 93.27191)
+    ' X(4) = CalculateSolarPolynomial(JCE, 1 / 450000, 0.0020708, -1934.136261, 125.04452)
+    ' Console.WriteLine(X(0))
+    ' Console.WriteLine(X(1))
+    ' Console.WriteLine(X(2))
+    ' Console.WriteLine(X(3))
+    ' Console.WriteLine(X(4))
+
+    ' ' JCE, X, NutationType.Longitude
+    ' Dim JCE As Double = 0.037927819922933585
+    ' Dim X(4) As Double
+    ' X(0) = 265.86117906490836
+    ' X(1) = 282.89321846136477
+    ' X(2) = 234.07570261126602
+    ' X(3) = 60.07101228227839
+    ' X(4) = 51.686951165383405
+    ' Dim Δψ As Double = CalculateNutation(JCE, X, NutationType.Longitude)
+    ' Console.WriteLine(Δψ)
+    ' Dim Δε As Double = CalculateNutation(JCE, X, NutationType.Obliquity)
+    ' Console.WriteLine(Δε)
 
     ' 'date, lon, lat, elev, slope, azimuth, temp, pressure, solar_position
-    ' Dim TestDate As DateTime = New DateTime(2003, 10, 17, 19, 30, 30, 0, DateTimeKind.Utc)
-    ' 'Dim TestDate As DateTime = New DateTime(2017, 7, 1, 20, 0, 0, 0, DateTimeKind.Utc)
+    ' 'Dim TestDate As DateTime = New DateTime(2003, 10, 17, 19, 30, 30, 0, DateTimeKind.Utc)
+    ' 'Dim TestDate As DateTime = New DateTime(2017, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+    ' 'Dim TestDate As DateTime = New DateTime(2017, 7, 1, 18, 0, 0, 0, DateTimeKind.Utc)
+    ' Dim TestDate As DateTime = New DateTime(2017, 7, 1, 20, 0, 0, 0, DateTimeKind.Utc)
     ' Console.WriteLine(TestDate)
     ' Dim TestSP As SolarPosition = CalculateSolarPosition(TestDate)
     ' Console.WriteLine(TestSP.R)
@@ -832,21 +949,32 @@ Public Module Program
     '     SolarPositions(I) = CalculateSolarPosition(RecordDate.AddMinutes(I * TimeStep - 30))
     ' Next
 
+
     ' ' lon, lat, elev, slope, azimuth, temp, pressure, solar_position
-    ' Dim TestDate As DateTime = New DateTime(2017, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-    ' Dim Test_SP As SolarPosition = CalculateSolarPosition(TestDate)
-    ' ' Test point 1
-    ' Dim Output1 As Double = CalculateInstantaneousRa(
-    '   -113.42677351013316, 41.81679884002846, 5669.700337414034, 1.691116213798523, 189.4030303955078,
-    '   72.10305476625949, 83.11632613999164, Test_SP
+    ' Dim TestDate0 As DateTime = New DateTime(2017, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+    ' Dim Test_SP0 As SolarPosition = CalculateSolarPosition(TestDate0)
+    ' Dim Output0 As Double = CalculateInstantaneousRa(
+    '   -113.94387718935013, 40.06790112424004, 5421.52587890625, 3.3938817977905273, 284.52252197265625,
+    '   79.142, 82.26289999999999, Test_SP0
     ' )
-    ' Console.WriteLine(Output1)
-    ' ' Test point 2
-    ' Dim Output2 As Double = CalculateInstantaneousRa(
-    '   -113.41373207120276, 41.812179783631834, 5593.457918405696, 2.260589599609375, 164.3304443359375,
-    '   72.46959210387394, 83.32195663998966, Test_SP
+    ' Console.WriteLine(Output0)
+
+    ' Dim TestDate18 As DateTime = New DateTime(2017, 7, 1, 18, 0, 0, 0, DateTimeKind.Utc)
+    ' Dim Test_SP18 As SolarPosition = CalculateSolarPosition(TestDate18)
+    ' Dim Output18 As Double = CalculateInstantaneousRa(
+    '   -113.94387718935013, 40.06790112424004, 5421.52587890625, 3.3938817977905273, 284.52252197265625,
+    '   79.66400000000004, 82.14222, Test_SP18
     ' )
-    ' Console.WriteLine(Output2)
+    ' Console.WriteLine(Output18)
+
+    ' Dim TestDate20 As DateTime = New DateTime(2017, 7, 1, 20, 0, 0, 0, DateTimeKind.Utc)
+    ' Dim Test_SP20 As SolarPosition = CalculateSolarPosition(TestDate20)
+    ' Dim Output20 As Double = CalculateInstantaneousRa(
+    '   -113.94387718935013, 40.06790112424004, 5421.52587890625, 3.3938817977905273, 284.52252197265625,
+    '   84.81200000000007, 82.13036, Test_SP20
+    ' )
+    ' Console.WriteLine(Output20)
+
 
     ' ' RsSource, RaSource, RaDestination, Slope
     ' Dim Output As Double = TranslateRs(0.42061625, 0.0567711, 0.38273549857, 2.15562152863)
@@ -854,22 +982,73 @@ Public Module Program
     ' Dim Output As Double = TranslateRs(0.42061625, 0.0567711, 0, 2.26058959961)
     ' Console.WriteLine(Output)
 
+
+    ' Console.WriteLine("0")
     ' ' elev, temp, rh, wind, rs, ra, zw, type, pres
-    ' Dim Output As Double = CalculateHourlyASCEReferenceET(
-    '   4584, 86.27, 11.88, 0.786, 75, 105, 2 / 0.3048, ReferenceET.ShortReference, 85.979
+    ' Dim ETo0 As Double = CalculateHourlyASCEReferenceET(
+    '   5421.52587890625, 79.00013596481276, 19.82057137642429, 4.218869373485886,
+    '   42.367205269590094, 67.70220269275103, ToFeet(2), ReferenceETType.ShortReference,
+    '   83.6761147644775
+    ' )
+    ' Console.WriteLine(ETo0)
+
+    ' Console.WriteLine("18")
+    ' Dim ETo18 As Double = CalculateHourlyASCEReferenceET(
+    '   5421.52587890625, 77.89298241625437, 23.927610818177225, 2.6562464950566755,
+    '   64.7354304608692, 97.88128445826067, ToFeet(2), ReferenceETType.ShortReference,
+    '   83.55629280487929
+    ' )
+    ' Console.WriteLine(ETo18)
+
+    ' Console.WriteLine("20")
+    ' Dim ETo20 As Double = CalculateHourlyASCEReferenceET(
+    '   5421.52587890625, 84.19681253900778, 18.318759434188863, 3.0152093309544292,
+    '   70.78540815587768, 107.9367407529658, ToFeet(2), ReferenceETType.ShortReference,
+    '   83.52770220243846
+    ' )
+    ' Console.WriteLine(ETo20)
+
+
+    ' ' MinDate, MaxDate, Longitude, Latitude, Elevation, Slope, Aspect, AirTemperature, AirPressure,
+    ' ' NLDAS_Longitude, NLDAS_Latitude, NLDAS_Elevation, NLDAS_Slope, NLDAS_Aspect,
+    ' ' NLDAS_AirTemperature, NLDAS_AirPressure, NLDAS_Rs, NLDAS_RH, NLDAS_WindU, NLDAS_WindV
+    ' Dim MinDate As DateTime = New DateTime(2017, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+    ' Dim MaxDate As DateTime = New DateTime(2017, 7, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+    ' Dim Output As Double = CalculateReferenceEvapotranspirationNLDAS_2A(
+    '   MinDate, MaxDate,
+    '   -113.94387718935013, 40.06790112424004, 5421.52587890625, 3.3938817977905273, 284.52252197265625,
+    '   79.142, 82.26289999999999,
+    '   -113.9375, 40.0625, 5910.8935546875, 0.6171352863311768, 347.6047668457031,
+    '   79.142, 82.26289999999999, 39.658813413585555,
+    '   12.165959853157597, -1.9067804238775594, -3.763382415547815
     ' )
     ' Console.WriteLine(Output)
 
-    Dim MinDate As DateTime = New DateTime(2017, 7, 1, 13, 0, 0, 0, DateTimeKind.Utc)
-    Dim MaxDate As DateTime = New DateTime(2017, 7, 2, 12, 0, 0, 0, DateTimeKind.Utc)
-    Dim Output As Double = CalculateReferenceEvapotranspirationNLDAS_2A(
-      MinDate, MaxDate,
-      -112.6854126892207, 39.31432060447445, 4584.507531242295, 0.07245257496833801, 239.5464324951172,
-      69.08371356284556, 86.10269479690949,
-      -112.6875, 39.3125, 4613.520889383954, 0.038626529276371, 263.5475158691406,
-      69.098, 86.10418, 9.678417884780739, 15.147373521610197, -3.154080171796707, -1.7671796707229779
+    Dim MinDate18 As DateTime = New DateTime(2017, 7, 1, 18, 0, 0, 0, DateTimeKind.Utc)
+    Dim MaxDate18 As DateTime = New DateTime(2017, 7, 1, 19, 0, 0, 0, DateTimeKind.Utc)
+    Dim Output18 As Double = CalculateReferenceEvapotranspirationNLDAS_2A(
+      MinDate18, MaxDate18,
+      -113.94387718935013, 40.06790112424004, 5421.52587890625, 3.3938817977905273, 284.52252197265625,
+      79.66400000000004, 82.14222,
+      -113.9375, 40.0625, 5910.8935546875, 0.6171352863311768, 347.6047668457031,
+      79.66400000000004, 82.14222, 66.20455717970765,
+      11.906323263569746, -2.6427307629180214, -0.2676183051056224
     )
-    Console.WriteLine(Output)
+    Console.WriteLine(Output18)
+
+    ' Dim MinDate20 As DateTime = New DateTime(2017, 7, 1, 20, 0, 0, 0, DateTimeKind.Utc)
+    ' Dim MaxDate20 As DateTime = New DateTime(2017, 7, 1, 21, 0, 0, 0, DateTimeKind.Utc)
+    ' Dim Output20 As Double = CalculateReferenceEvapotranspirationNLDAS_2A(
+    '   MinDate20, MaxDate20,
+    '   -113.94387718935013, 40.06790112424004, 5421.52587890625, 3.3938817977905273, 284.52252197265625,
+    '   84.81200000000007, 82.13036,
+    '   -113.9375, 40.0625, 5910.8935546875, 0.6171352863311768, 347.6047668457031,
+    '   84.81200000000007, 82.13036, 70.62785898538263,
+    '   10.108833322448895, -2.9438013561618463, 0.6523196186949546
+    ' )
+    ' Console.WriteLine(Output20)
+
+
 
   End Sub
 
