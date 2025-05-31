@@ -8,7 +8,17 @@ import gridet.utils as utils
 
 
 def eto(nldas_img):
-    """"""
+    """Compute hourly grass reference ET from an hourly NLDAS image
+
+    Parameters
+    ----------
+    nldas_img : ee.Image
+
+    Returns
+    -------
+    ee.Image
+
+    """
     return (
         etsz(nldas_img, surface='grass')
         .rename('eto')
@@ -17,7 +27,17 @@ def eto(nldas_img):
 
 
 def etr(nldas_img):
-    """"""
+    """Compute hourly alfalfa reference ET from an hourly NLDAS image
+
+    Parameters
+    ----------
+    nldas_img : ee.Image
+
+    Returns
+    -------
+    ee.Image
+
+    """
     return (
         etsz(nldas_img, surface='alfalfa')
         .rename('etr')
@@ -26,7 +46,7 @@ def etr(nldas_img):
 
 
 def etsz(nldas_img, surface):
-    """Hourly reference ET
+    """Compute hourly reference ET from an hourly NLDAS image
 
     Parameters
     ----------
@@ -38,9 +58,51 @@ def etsz(nldas_img, surface):
     ee.Image
 
     """
-
     if surface.lower() not in ['grass', 'alfalfa']:
         raise ValueError('surface must be "grass" or "alfalfa"')
+
+    # Apply the GridET adjustments/corrections to the NLDAS hourly image
+    # This function will also compute the variables needed the reference ET calculation
+    hourly_img = adjust(nldas_img)
+
+    # TODO: Pass in as input parameters
+    # Load the GridET ancillary assets (elevation, lat, lon, slope, aspect)
+    elevation = ee.Image('projects/openet/assets/reference_et/utah/gridet/ancillary/elevation')
+
+    # CGM - Commenting out for now since GridET elevation assets are already in feet
+    # Convert elevations to feet
+    # elevation = utils.ToFeet(elevation)
+
+    # NLDAS wind speed is at 10m but is corrected down to 2m when read in below
+    # Note, the Reference ET function in this module is expecting the height in feet
+    anemometer_height = utils.ToFeet(ee.Number(2))
+
+    # Compute hourly reference ET
+    return model.CalculateHourlyASCEReferenceET(
+        elevation=elevation,
+        temperature=hourly_img.select(['temperature']),
+        relative_humidity=hourly_img.select(['relative_humidity']),
+        wind_speed=hourly_img.select(['wind_speed']),
+        solar_radiation=hourly_img.select(['shortwave_radiation']),
+        extraterrestrial_radiation=hourly_img.select(['extraterrestrial_radiation']),
+        anemometer_height=anemometer_height,
+        reference_type=surface,
+        pressure=hourly_img.select(['pressure']),
+    ).rename('et_reference').set({'system:time_start': nldas_img.get('system:time_start')})
+
+
+def adjust(nldas_img):
+    """Apply GridET adjustments/corrections to the hourly NLDAS variables
+
+    Parameters
+    ----------
+    nldas_img : ee.Image
+
+    Returns
+    -------
+    ee.Image
+
+    """
 
     record_date = ee.Date(nldas_img.get('system:time_start'))
 
@@ -85,13 +147,9 @@ def etsz(nldas_img, surface):
     delta_z = (
         elevation
         .subtract(nldas_elevation.resample('bilinear'))
-        # .subtract(nldas_elevation.resample('bilinear').reproject(mask_crs, mask_transform))
+        #.subtract(nldas_elevation.resample('bilinear').reproject(mask_crs, mask_transform))
         .rename('delta_z')
     )
-
-    # NLDAS wind speed is at 10m but is corrected down to 2m when read in below
-    # Note, the Reference ET function in this module is expecting the height in feet
-    anemometer_height = utils.ToFeet(ee.Number(2))
 
     # GLOBALS
     # Derived from Strong, C., Khatri, K. B., Kochanski, A. K., Lewis, C. S., & Allen, L. N. (2017).
@@ -128,6 +186,7 @@ def etsz(nldas_img, surface):
 
     # Bilinearly interpolate to the output resolution
     nldas_interp = nldas_source.resample('bilinear')
+    #nldas_interp = nldas_source.resample('bilinear').reproject(mask_crs, mask_transform)
 
     # Correct for Topographical Differences
     # CGM - This is slightly different than GridET approach since
@@ -178,7 +237,7 @@ def etsz(nldas_img, surface):
             solar_position=solar.CalculateSolarPosition(record_date.advance(minute_offset, 'minute')),
         )
         project_ra = project_ra.add(temp_ra)
-    project_ra = project_ra.divide(5)
+    project_ra = project_ra.divide(5).rename('extraterrestrial_radiation')
 
     nldas_source_ra = solar.CalculateInstantaneousRa(
         longitude=nldas_longitude,
@@ -209,8 +268,8 @@ def etsz(nldas_img, surface):
     # Bilinearly interpolate NLDAS Ra and Rs to the GridET grid before TranslateRs call
     # CGM - This is slightly different than GridET approach since
     #   TranslateRs is being applied after interpolating the NLDAS Ra and Rs
-    nldas_interp_ra = nldas_source_ra.resample('bilinear').rename('ra')
-    nldas_interp_rs = nldas_source_rs.resample('bilinear').rename('rs')
+    nldas_interp_ra = nldas_source_ra.resample('bilinear')
+    nldas_interp_rs = nldas_source_rs.resample('bilinear')
 
     # Solar Radiation (Langley/hr)
     rs = solar.TranslateRs(
@@ -230,6 +289,7 @@ def etsz(nldas_img, surface):
         .add(utils.ToMilesPerHour(nldas_interp.select(['wind_v']).multiply(u2)).pow(2))
         .sqrt()
         .clamp(0, 5.5)
+        .rename('wind_speed')
     )
 
     # Relative Humidity (%)
@@ -245,22 +305,14 @@ def etsz(nldas_img, surface):
     relative_humidity = (
         nldas_source_rh
         .resample('bilinear')
+        #.reproject(mask_crs, mask_transform)
         .multiply(1 - HumidityCorrectionCoefficients[5])
         .subtract(utils.SumProduct(time_variables, HumidityCorrectionCoefficients[:5]))
         .clamp(7, 100)
+        .rename('relative_humidity')
     )
 
-    # Compute hourly reference ET
-    hourly_img = model.CalculateHourlyASCEReferenceET(
-        elevation=elevation,
-        temperature=temperature,
-        relative_humidity=relative_humidity,
-        wind_speed=wind_speed,
-        solar_radiation=rs,
-        extraterrestrial_radiation=project_ra,
-        anemometer_height=anemometer_height,
-        reference_type=surface,
-        pressure=pressure,
+    return (
+        ee.Image([temperature, relative_humidity, wind_speed, rs, project_ra, pressure])
+        .set({'system:time_start': record_date.millis()})
     )
-
-    return hourly_img.rename('et_reference').set('system:time_start', record_date.millis())

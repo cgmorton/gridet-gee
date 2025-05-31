@@ -87,7 +87,6 @@ def CalculateInstantaneousRa(
     #     .atan2(sp_delta.cos().subtract(x.multiply(xi.sin()).multiply(h.cos())))
     # )
 
-    # CGM - This was commented out in the source
     # Topocentric Sun Right Ascension (radians)
     # αp = SolarPosition.α.add(delta_a)
 
@@ -188,7 +187,6 @@ def CalculateSolarPosition(record_date):
     )
     a = year.divide(100).int()
     jd = jd.add(jd.gt(2299160).multiply(a.divide(4).int().subtract(a).add(2)))
-    # print('jd', jd.getInfo())
 
     # Approximate Difference between the Earth Rotation Time and Terrestrial Time (seconds)
     delta_t = LookupDeltaT(ee.Date(record_date))
