@@ -5,9 +5,6 @@ import ee
 from . import utils
 
 
-# CGM - Made the following changes to the function parameters
-#   Renamed ReferenceET to reference_type
-#   Removed Latitude, Longitude, RecordDate, and DewpointTemperature parameters
 def CalculateHourlyASCEReferenceET(
         elevation,
         temperature,
@@ -209,3 +206,31 @@ def AdjustAirPressure(pressure, temperature, delta_z):
         {'P': pressure, 'T': utils.ToRankine(temperature), 'delta_z': delta_z, 'G': g, 'R': r}
     )
     # return pressure.divide(utils.ToRankine(temperature).multiply(r).pow(-1).multiply(delta_z).multiply(g).exp())
+
+
+def CalculateDailyHargreavesReferenceET(
+    minimum_temperature,
+    average_temperature,
+    maximum_temperature,
+    extraterrestrial_radiation,
+):
+    # <summary>
+    # Calculates daily reference evapotranspiration from the Hargreaves-Samani equation.
+    # </summary>
+    # <param name="minimum_temperature">Maximum Daily Temperature (Fahrenheit)</param>
+    # <param name="average_temperature">Average Daily Temperature (Fahrenheit)</param>
+    # <param name="maximum_temperature">Minimum Daily Temperature (Fahrenheit)</param>
+    # <param name="extraterrestrial_radiation">Total Daily Extraterrestrial Solar Radiation (Langleys)</param>
+    # <returns>Estimated Reference Evapotranspiration (Inches/Day)</returns>
+    # <remarks>
+    # Source: Hargreaves, G. H., Samani, Z. A. (1982). Estimating potential evapotranspiration.
+    # Journal of the Irrigation and Drainage Division, 108(3), 225-230.
+    # </remarks>
+
+    # return average_temperature * (maximum_temperature - minimum_temperature) ^ 0.5 * extraterrestrial_radiation / 800000  # 1340000
+    return (
+        maximum_temperature.subtract(minimum_temperature).pow(2)
+        .multiply(average_temperature)
+        .multiply(extraterrestrial_radiation).divide(800000)
+        .rename('hargreaves_reference_et')
+    )
