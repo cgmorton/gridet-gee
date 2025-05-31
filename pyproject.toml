@@ -1,12 +1,12 @@
 [project]
 name = "gridet-gee"
-version = "0.0.1"
+version = "0.1.0"
 authors = [
   { name = "Charles Morton", email = "charles.morton@dri.edu" },
 ]
 description = "Google Earth Engine implementation of the GridET model"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.2"
 keywords = ["RefET", "Earth Engine", "evapotranspiration"]
 license = {file = "LICENSE"}
 classifiers = [
@@ -15,7 +15,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "earthengine-api>=0.1.364",
+    "earthengine-api>=1.5.2",
 ]
 
 [project.urls]
