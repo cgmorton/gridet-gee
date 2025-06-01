@@ -229,7 +229,7 @@ def CalculateDailyHargreavesReferenceET(
 
     # return average_temperature * (maximum_temperature - minimum_temperature) ^ 0.5 * extraterrestrial_radiation / 800000  # 1340000
     return (
-        maximum_temperature.subtract(minimum_temperature).pow(2)
+        maximum_temperature.subtract(minimum_temperature).sqrt()
         .multiply(average_temperature)
         .multiply(extraterrestrial_radiation).divide(800000)
         .rename('hargreaves_reference_et')
