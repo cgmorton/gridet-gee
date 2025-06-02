@@ -249,7 +249,7 @@ def CalculateSolarPosition(record_date):
         .multiply(u).add(1999.25).multiply(u).add(-1.55).multiply(u).add(-4680.96)
         .multiply(u).add(84381.448)
     )
-    # esilon0 = (
+    # epsilon0 = (
     #     84381.448 + u * (-4680.96 + u * (-1.55 + u * (1999.25 + u * (-51.38 + u * (-249.67 +
     #     u * (-39.05 + u * (7.12 + u * (27.87 + u * (5.79 + u * 2.45)))))))))
 
@@ -552,8 +552,6 @@ def CalculateEarthHeliocentricLatitude(jme):
         .multiply(ee.Array(abc[1][0]))
         .reduce(ee.Reducer.sum(), [0]).get([0])
     )
-    # print('b0', b0.getInfo())
-    # print('b1', b1.getInfo())
 
     return b1.multiply(jme).add(b0).divide(100000000)
 

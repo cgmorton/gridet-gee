@@ -6,7 +6,7 @@ authors = [
 ]
 description = "Google Earth Engine implementation of the GridET model"
 readme = "README.md"
-requires-python = ">=3.2"
+requires-python = ">=3.9"
 keywords = ["RefET", "Earth Engine", "evapotranspiration"]
 license = {file = "LICENSE"}
 classifiers = [
